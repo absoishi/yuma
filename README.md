@@ -13,18 +13,10 @@
 
 ### Usage
 ----------------------
-<<<<<<< HEAD
 To install yuma package
 ```py
 pip install git+https://github.com/absoishi/yuma
 ```
-
-=======
-To install yuma package.
-``'''py
-pip install git+https://github.com/absoishi/yuma
-'''
->>>>>>> 618fa95c95a01537c31b6237e2a4edd1d6990c23
 To scrape yuma data.
 ```py
 # import modules
