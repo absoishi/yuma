@@ -110,7 +110,7 @@ class TargetRaceUrlsGetter():
         try:
             if target_date > dates_links_courses['date'][0] or target_date < dates_links_courses['date'][len(dates_links_courses)-1]:
                 return True
-        except KeyError:
+        except (KeyError, IndexError):
             return True
         else:
             return False
