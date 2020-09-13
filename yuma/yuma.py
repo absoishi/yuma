@@ -5,7 +5,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
-class YumaScrapere():
+class YumaScraper():
     def __init__(self, JRAorNAR):
         self.JRAorNAR = JRAorNAR
 
@@ -172,7 +172,7 @@ class YumaIndexGetter():
         return contents
 
     def _get_number_name_index(self, contents):
-        number_name_index = re.findall(number_name_index_format, contents)
+        number_name_index = re.findall(self.number_name_index_format, contents)
         return number_name_index
 
     def _split_number_name_index(self, number_name_index):
