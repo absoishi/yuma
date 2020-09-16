@@ -13,7 +13,7 @@ class YumaScraper():
         urls_getter = TargetRaceUrlsGetter(self.JRAorNAR)
         urls = urls_getter.get_urls(input_date)
         
-        ret_df = pd.DataFrame([], columns=['date', 'course', 'race_number', 'horse_number', 'horse_name', 'yuma_index'])
+        ret_df = pd.DataFrame([], columns=['date', 'course', 'race_number', 'horse_number', 'horse_name', 'yuma_index', 'jiku_himo'])
 
         index_getter = YumaIndexGetter()
         for url in urls:
@@ -123,6 +123,8 @@ class YumaIndexGetter():
     race_info_format = re.compile(r'^(\d{8}) (札幌|函館|福島|新潟|東京|中山|中京|京都|阪神|小倉|門別|盛岡|水沢|浦和|船橋|大井|川崎|金沢|笠松|名古屋|園田|姫路|高知|佐賀|ばんえい)(\d{1,2})R')
     number_name_index_format = re.compile(r'\d{1,2}【[\d/. ]+%】[\u30A1-\u30F4ー]+')
     number_name_index_split_format = re.compile(r'(\d{1,2})【([\d/. ]+)%】([\u30A1-\u30F4ー]+)')
+    jiku_himo_format = re.compile(r'[\u30A1-\u30F4ー]+ \[[軸|紐]\]')
+    jiku_himo_split_format = re.compile(r'([\u30A1-\u30F4ー]+) \[([軸|紐])\]')
 
     def __init__(self):
         pass
@@ -132,12 +134,15 @@ class YumaIndexGetter():
         print(self._get_title(soup))
         race_info = self._get_race_info(soup)
         table = self._get_table_data(soup)
+        jiku_himo_table = self._get_jiku_himo_table(soup)
         df = pd.DataFrame([[0 for i in range(6)] for j in range(len(table))], columns=['date', 'course', 'race_number', 'horse_number', 'horse_name', 'yuma_index'])
         df['date'] = race_info['date'][0]
         df['course'] = race_info['course'][0]
         df['race_number'] = race_info['race_number'][0]
         df[['horse_number', 'horse_name', 'yuma_index']] = table
-        return df
+        ret_df = pd.merge(df, jiku_himo_table, how='left', on='horse_name')
+        ret_df = ret_df.fillna('0')
+        return ret_df
 
     def _get_page(self, url):
         time.sleep(2)
@@ -177,6 +182,24 @@ class YumaIndexGetter():
 
     def _split_number_name_index(self, number_name_index):
         match_objs = [self.number_name_index_split_format.search(text) for text in number_name_index]
-        number_name_index = [[int(match_obj.group(1)), match_obj.group(3), float(match_obj.group(2))] for match_obj in match_objs]
-        number_name_index_df = pd.DataFrame(number_name_index, columns=['horse_number', 'horse_name', 'yuma_index']).sort_values('horse_number').reset_index(drop=True)
+        number_name_index_list = [[int(match_obj.group(1)), match_obj.group(3), float(match_obj.group(2))] for match_obj in match_objs]
+        number_name_index_df = pd.DataFrame(number_name_index_list, columns=['horse_number', 'horse_name', 'yuma_index']).sort_values('horse_number').reset_index(drop=True)
         return number_name_index_df
+
+    def _get_jiku_himo_table(self, soup):
+        contents = self._get_contents(soup)
+        jiku_himo = self._get_jiku_himo(contents)
+        jiku_himo_df = self._split_jiku_himo(jiku_himo)
+        return jiku_himo_df
+
+    def _get_jiku_himo(self, contents):
+        jiku_himo = re.findall(self.jiku_himo_format, contents)
+        return jiku_himo
+
+    def _split_jiku_himo(self, jiku_himo):
+        match_objs = [self.jiku_himo_split_format.search(text) for text in jiku_himo]
+        jiku_himo_list = [[match_obj.group(1), match_obj.group(2)] for match_obj in match_objs]
+        jiku_himo_df = pd.DataFrame(jiku_himo_list, columns=['horse_name', 'jiku_himo'])
+        jiku_himo_df.loc[jiku_himo_df['jiku_himo']=='軸', 'jiku_himo'] = '100'
+        jiku_himo_df.loc[jiku_himo_df['jiku_himo']=='紐', 'jiku_himo'] = '200'
+        return jiku_himo_df
